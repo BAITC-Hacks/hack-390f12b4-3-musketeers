@@ -5,9 +5,12 @@ from threading import Lock
 from time import monotonic
 
 from fastapi import FastAPI, HTTPException, Request
+from typing import Literal
+import hmac
 from fastapi.responses import JSONResponse
 
-from backend import advisor
+from backend import advisor, leaderboard
+from backend.events import EVENTS, event_data
 from backend.engine import DATA, EXAMPLE, RULESETS, Scenario, project, recommend, simulate, validate
 
 app = FastAPI(title="Аким на 5 часов", version="2.0.0")
@@ -56,13 +59,13 @@ def get_data():
             {"measure_id": "M2"}, {"measure_id": "M4", "district_id": "saryarka"},
             {"measure_id": "M7", "district_id": "nura"}, {"measure_id": "M10", "district_id": "nura"},
             {"measure_id": "M12"}]})
-    return {**DATA, "ruleset": active_ruleset(), "baseline": project([]), "example": example.model_dump()}
+    return {**DATA, "ruleset": active_ruleset(), "events": EVENTS, "baseline": project([]), "example": example.model_dump()}
 
 
 @app.post("/api/preview")
 def preview(scenario: Scenario):
     check(scenario, final=False)
-    return {"complete": len(scenario.decisions) == 5, "projection": project(scenario.decisions)}
+    return {"complete": len(scenario.decisions) == 5, "projection": project(scenario.decisions, event_data(DATA, scenario.event_id))}
 
 
 @app.post("/api/simulate")
@@ -77,21 +80,43 @@ def recommendations(scenario: Scenario):
     return recommend(scenario)
 
 
-@app.post("/api/analyze")
-def analyze(scenario: Scenario, request: Request):
-    check(scenario)
-    address = request.client.host if request.client else "unknown"
+def rate_limit(request, purpose, maximum):
+    address = purpose + ":" + (request.client.host if request.client else "unknown")
     now = monotonic()
     with RATE_LOCK:
         bucket = RATE_BUCKETS.setdefault(address, deque())
         while bucket and now - bucket[0] > 60:
             bucket.popleft()
-        if len(bucket) >= 12:
-            raise HTTPException(429, detail="Слишком много запросов анализа. Повторите через минуту.")
+        if len(bucket) >= maximum:
+            raise HTTPException(429, detail="Слишком много запросов. Повторите через минуту.")
         bucket.append(now)
         RATE_BUCKETS.move_to_end(address)
         while len(RATE_BUCKETS) > 1024:
             RATE_BUCKETS.popitem(last=False)
+
+
+@app.post("/api/analyze")
+def analyze(scenario: Scenario, request: Request):
+    check(scenario)
+    rate_limit(request, "analyze", 12)
+    access_code = os.getenv("DEMO_ACCESS_CODE", "")
+    if access_code and not hmac.compare_digest(request.headers.get("X-Demo-Code", ""), access_code):
+        raise HTTPException(403, "Введите код доступа к AI, предоставленный командой.")
     calculated = simulate(scenario)
     candidates = recommend(scenario)
     return advisor.analyze(scenario, calculated, candidates)
+
+
+@app.get("/api/leaderboard")
+def team_ranking(event_id: Literal["none", "winter-v1", "growth-v1"] = "none"):
+    return leaderboard.ranking(active_ruleset(), event_id)
+
+
+@app.post("/api/submit")
+def team_submit(value: leaderboard.Submission, request: Request):
+    check(value.scenario)
+    rate_limit(request, "submit", 12)
+    try:
+        return leaderboard.submit(value)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from None

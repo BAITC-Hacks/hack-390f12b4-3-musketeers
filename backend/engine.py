@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Literal
 
+from backend.events import event_data
+
 from pydantic import BaseModel, ConfigDict, Field, StrictStr
 
 DATA = json.loads((Path(__file__).resolve().parents[1] / "data/city_data.json").read_text(encoding="utf-8"))
@@ -25,6 +27,7 @@ class Scenario(BaseModel):
     decisions: list[Decision] = Field(max_length=5)
     ruleset: Literal["dataset-v1", "one-per-direction-v1"] = "dataset-v1"
     dataset_version: Literal["dataset-v1"] = "dataset-v1"
+    event_id: Literal["none", "winter-v1", "growth-v1"] = "none"
 
 
 def canonical(scenario: Scenario) -> str:
@@ -140,7 +143,7 @@ def simulate(scenario: Scenario) -> dict:
     errors = validate(scenario)
     if errors:
         raise ValueError(errors)
-    return {**project(scenario.decisions), "scenario": scenario.model_dump()}
+    return {**project(scenario.decisions, event_data(DATA, scenario.event_id)), "scenario": scenario.model_dump()}
 
 
 def recommend(scenario: Scenario) -> dict:
@@ -157,13 +160,13 @@ def recommend(scenario: Scenario) -> dict:
             targets = [None] if measure["scope"] == "city" else list(DISTRICTS)
             for target in targets:
                 added = Decision(measure_id=measure["id"], district_id=target)
-                candidate = Scenario(decisions=[*rest, added], ruleset=scenario.ruleset)
+                candidate = Scenario(decisions=[*rest, added], ruleset=scenario.ruleset, event_id=scenario.event_id)
                 key = canonical(candidate)
                 if key in seen or validate(candidate):
                     continue
                 seen.add(key)
                 checked += 1
-                calculated = project(candidate.decisions)
+                calculated = project(candidate.decisions, event_data(DATA, candidate.event_id))
                 gain = calculated["result"]["score"] - current["result"]["score"]
                 if gain > 1e-9:
                     improvements.append({

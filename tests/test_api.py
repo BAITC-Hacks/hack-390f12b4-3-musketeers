@@ -12,7 +12,8 @@ client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def no_live_api(monkeypatch):
+def no_live_api(monkeypatch, tmp_path):
+    monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "city.sqlite3"))
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_MODEL", raising=False)
     monkeypatch.setenv("RULESET", "dataset-v1")

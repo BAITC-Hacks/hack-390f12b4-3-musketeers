@@ -1,0 +1,15 @@
+services:
+  city:
+    build: .
+    ports:
+      - "127.0.0.1:8520:8080"
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8080
+      DATABASE_PATH: /data/city.sqlite3
+    volumes:
+      - city-data:/data
+    restart: unless-stopped
+volumes:
+  city-data:

@@ -21,7 +21,7 @@ async def lifespan(app):
 
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
-ENDPOINTS = {"data": "GET", "health": "GET", "preview": "POST", "simulate": "POST", "recommend": "POST", "analyze": "POST"}
+ENDPOINTS = {"data": "GET", "health": "GET", "preview": "POST", "simulate": "POST", "recommend": "POST", "analyze": "POST", "leaderboard": "GET", "submit": "POST"}
 
 
 @app.middleware("http")
@@ -48,8 +48,8 @@ async def proxy(endpoint: str, request: Request):
             return JSONResponse({"detail": "Запрос превышает 16 КБ."}, status_code=413)
     try:
         result = await request.app.state.api.request(
-            request.method, f"/api/{endpoint}", content=bytes(body),
-            headers={"Content-Type": "application/json"},
+            request.method, f"/api/{endpoint}", content=bytes(body), params=request.query_params,
+            headers={"Content-Type": "application/json", "X-Demo-Code": request.headers.get("X-Demo-Code", "")},
         )
     except httpx.RequestError:
         return JSONResponse({"detail": "Нет связи с сервером расчёта. Попробуйте ещё раз."}, status_code=503)

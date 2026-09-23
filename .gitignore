@@ -8,3 +8,6 @@ __pycache__/
 .streamlit/secrets.toml
 *.log
 work/
+
+runtime/
+*.sqlite3*

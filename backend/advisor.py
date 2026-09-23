@@ -113,6 +113,10 @@ def validate_audit(audit: Audit, facts: dict, candidates: list[dict]):
 
 def analyze(scenario: Scenario, result: dict, recommendations: dict) -> dict:
     facts = facts_for(result, recommendations)
+    if scenario.event_id != "none":
+        from backend.events import EVENTS
+        event = next(e for e in EVENTS if e["id"] == scenario.event_id)
+        facts["event"] = event["description"] + " Изменения плана сравниваются с состоянием после события."
     base = {"facts": facts, "audit": fallback(result, recommendations), "source": "fallback_no_key", "cached": False, "model": None}
     key = os.getenv("OPENAI_API_KEY", "").strip()
     model = os.getenv("OPENAI_MODEL", "").strip()
@@ -130,6 +134,9 @@ def analyze(scenario: Scenario, result: dict, recommendations: dict) -> dict:
         cached = CACHE.get(cache_key)
         if cached and monotonic() - cached[0] < 900:
             return {**deepcopy(cached[1]), "cached": True}
+        from backend.leaderboard import reserve_ai_call
+        if not reserve_ai_call():
+            return {**base, "source": "fallback_daily_limit", "reason": "daily_limit"}
         try:
             with OpenAI(api_key=key, timeout=20.0, max_retries=0) as client:
                 response = client.responses.create(
@@ -173,4 +180,4 @@ def analyze(scenario: Scenario, result: dict, recommendations: dict) -> dict:
             return output
         except (OpenAIError, ValueError, TypeError) as exc:
             logger.warning("AI analysis unavailable: %s", type(exc).__name__)
-            return {**base, "source": "fallback_api_error"}
+            return {**base, "source": "fallback_api_error", "reason": type(exc).__name__}

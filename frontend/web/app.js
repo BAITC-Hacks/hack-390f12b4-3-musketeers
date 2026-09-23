@@ -50,11 +50,11 @@ const DESCRIPTIONS = {
   M14:"Надёжнее ЖКХ и быстрее реакция на обращения.",
 };
 const STORAGE = "akim-workspace-v2";
-const state = {city:null, plan:[], projection:null, view:"city", district:"nura", filter:"all", mapMode:"after", edit:null, result:null, report:null, recs:null, saved:[], scenarioName:"", busy:false, aiBusy:false, recBusy:false, revision:0};
+const state = {eventId:"none", leaderboard:null, teamName:"", demoCode:"", city:null, plan:[], projection:null, view:"city", district:"nura", filter:"all", mapMode:"after", edit:null, result:null, report:null, recs:null, saved:[], scenarioName:"", busy:false, aiBusy:false, recBusy:false, revision:0};
 let toastTimer, modalVersion = 0, modalMeasure = null, modalCandidate = null, lastFocus = null;
 const measure = id => state.city.measures.find(m => m.id === id);
 const district = id => state.city.districts.find(d => d.id === id);
-const scenario = (plan = state.plan) => ({decisions:plan, ruleset:state.city.ruleset, dataset_version:state.city.version});
+const scenario = (plan = state.plan) => ({decisions:plan, ruleset:state.city.ruleset, dataset_version:state.city.version, event_id:state.eventId});
 const targetName = d => d.district_id ? district(d.district_id).name : "Весь город";
 const decisionName = d => measure(d.measure_id).title + " · " + targetName(d);
 const remaining = () => state.city.budget - state.projection.spent;
@@ -63,7 +63,7 @@ async function api(path, body) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), path === "analyze" ? 55000 : 12000);
   try {
-    const response = await fetch("/api/" + path, {method:body ? "POST" : "GET", headers:{"Content-Type":"application/json"}, body:body ? JSON.stringify(body) : undefined, signal:controller.signal});
+    const response = await fetch("/api/" + path, {method:body ? "POST" : "GET", headers:{"Content-Type":"application/json","X-Demo-Code":state.demoCode}, body:body ? JSON.stringify(body) : undefined, signal:controller.signal});
     const data = await response.json();
     if (!response.ok) {
       const detail = data.detail;
@@ -86,8 +86,9 @@ function persist() {
     localStorage.setItem(STORAGE, JSON.stringify({scenario:scenario(), saved:state.saved.map(s => ({name:s.name, scenario:s.scenario}))}));
   } catch { toast("Браузер не разрешил сохранение. Скачайте сценарий в JSON, чтобы не потерять его."); }
 }
-async function changePlan(plan) {
-  const checked = await api("preview", scenario(plan));
+async function changePlan(plan, eventId = state.eventId) {
+  const checked = await api("preview", {...scenario(plan), event_id:eventId});
+  state.eventId = eventId; state.leaderboard = null;
   state.plan = plan; state.projection = checked.projection; state.result = null; state.report = null; state.recs = null;
   state.edit = null; state.revision++; state.aiBusy = false; state.recBusy = false;
   persist();
@@ -100,7 +101,7 @@ async function restoreStorage() {
   if (stored.scenario) {
     try {
       const value = await api("preview", stored.scenario);
-      state.plan = stored.scenario.decisions; state.projection = value.projection;
+      state.eventId = stored.scenario.event_id || "none"; state.plan = stored.scenario.decisions; state.projection = value.projection;
     } catch { toast("Сохранённый план не удалось проверить. Загружено исходное состояние города."); }
   }
   const saved = Array.isArray(stored.saved) ? stored.saved.slice(-4) : [];
@@ -113,16 +114,16 @@ async function restoreStorage() {
 }
 
 function header() {
-  const titles = {city:"Обзор города",initiatives:"Инициативы",results:"Результат",compare:"Сравнение",help:"Как это работает"};
+  const titles = {city:"Обзор города",initiatives:"Инициативы",results:"Результат",compare:"Сравнение",teams:"Команды",help:"Как это работает"};
   return '<aside class="sidebar"><a class="brand" href="#city" data-view="city"><div class="brand-mark">А</div><div><strong>Аким на 5 часов</strong><small>CITY LAB · ASTANA</small></div></a><div class="nav-label">ВАШ ГОРОД</div><nav class="nav" aria-label="Основная навигация">' +
-    [["city","city","Обзор города"],["initiatives","grid","Инициативы"],["results","chart","Результат"],["compare","compare","Сравнение"]].map(([view,i,title]) =>
+    [["city","city","Обзор города"],["initiatives","grid","Инициативы"],["results","chart","Результат"],["compare","compare","Сравнение"],["teams","chart","Команды"]].map(([view,i,title]) =>
       '<button class="nav-button ' + (state.view === view ? "active" : "") + '" data-view="' + view + '" aria-label="' + title + '" ' + (state.view === view ? 'aria-current="page"' : '') + '>' + icon(i) + '<span>' + title + '</span>' + (view === "initiatives" ? '<span class="nav-count">14</span>' : '') + '</button>').join("") +
     '</nav><div class="sidebar-bottom"><button class="nav-button ' + (state.view === "help" ? "active" : "") + '" data-view="help" aria-label="Как это работает">' + icon("help") + '<span>Как это работает</span></button><div class="sandbox-note"><strong>Маленькая модель.<br>Большие решения.</strong>Исследуйте, как ваш выбор меняет жизнь города.</div><div class="team">HACKALEM AI · 3-MUSKETEERS</div></div></aside>' +
     '<div class="shell"><header class="topbar"><div class="breadcrumb"><span>Симулятор</span><span>/</span><strong>' + titles[state.view] + '</strong></div><div class="mobile-brand"><span class="brand-mark">А</span>Аким на 5 часов</div><div class="topbar-end"><span class="status">Учебная симуляция</span>' + button(icon("help") + "Правила", "help", "ghost small") + '<div class="avatar" title="Локальный сценарий">АК</div></div></header>';
 }
 function stats() {
   const p = state.projection, score = p.result.score, count = state.plan.length;
-  return '<section class="budget-strip" aria-label="Бюджет и результат текущего плана"><div class="stat"><div class="stat-label">Осталось в бюджете' + icon("wallet") + '</div><div class="stat-value">' + remaining() + '<span class="suffix">/ ' + state.city.budget + '</span></div><div class="budget-track"><span style="width:' + p.spent / state.city.budget * 100 + '%"></span></div><div class="stat-note">Потрачено ' + p.spent + ' условных единиц</div></div><div class="stat"><div class="stat-label">Принято решений' + icon("check") + '</div><div class="stat-value">' + count + '<span class="suffix">из 5</span></div><div class="decision-track">' + Array.from({length:5},(_,i) => '<span class="' + (i < count ? "filled" : "") + '"></span>').join("") + '</div><div class="stat-note">' + (count === 5 ? "План готов к оценке" : "Осталось выбрать: " + (5-count)) + '</div></div><div class="stat"><div class="stat-label">' + (state.result ? "Итоговая оценка" : count ? "Прогноз качества жизни" : "Качество жизни сейчас") + icon("chart") + '</div><div class="stat-value">' + number(score) + (count ? '<span class="delta ' + (p.delta_score < 0 ? "down" : "") + '">' + signed(p.delta_score) + '</span>' : '') + '</div><div class="stat-note">Astana Quality of Life Score</div></div></section>';
+  return (state.eventId !== "none" ? '<div class="event-banner">Учебное событие: ' + escape(eventName(state.eventId)) + ' · прирост считается от состояния после события</div>' : "") + '<section class="budget-strip" aria-label="Бюджет и результат текущего плана"><div class="stat"><div class="stat-label">Осталось в бюджете' + icon("wallet") + '</div><div class="stat-value">' + remaining() + '<span class="suffix">/ ' + state.city.budget + '</span></div><div class="budget-track"><span style="width:' + p.spent / state.city.budget * 100 + '%"></span></div><div class="stat-note">Потрачено ' + p.spent + ' условных единиц</div></div><div class="stat"><div class="stat-label">Принято решений' + icon("check") + '</div><div class="stat-value">' + count + '<span class="suffix">из 5</span></div><div class="decision-track">' + Array.from({length:5},(_,i) => '<span class="' + (i < count ? "filled" : "") + '"></span>').join("") + '</div><div class="stat-note">' + (count === 5 ? "План готов к оценке" : "Осталось выбрать: " + (5-count)) + '</div></div><div class="stat"><div class="stat-label">' + (state.result ? "Итоговая оценка" : count ? "Прогноз качества жизни" : "Качество жизни сейчас") + icon("chart") + '</div><div class="stat-value">' + number(score) + (count ? '<span class="delta ' + (p.delta_score < 0 ? "down" : "") + '">' + signed(p.delta_score) + '</span>' : '') + '</div><div class="stat-note">Astana Quality of Life Score</div></div></section>';
 }
 function heading(eyebrow,title,description,action="") {
   return '<div class="page-heading"><div><div class="eyebrow">' + eyebrow + '</div><h1 tabindex="-1" id="page-title">' + title + '</h1><p>' + description + '</p></div>' + action + '</div>';
@@ -131,14 +132,16 @@ function render() {
   const active = document.activeElement;
   const focusKey = ["data-filter","data-district","data-map"].find(key => active?.hasAttribute(key));
   const focusValue = focusKey && active.getAttribute(focusKey);
-  const views = {city:cityView, initiatives:catalogView, results:resultsView, compare:compareView, help:helpView};
+  const views = {city:cityView, initiatives:catalogView, results:resultsView, compare:compareView, teams:teamsView, help:helpView};
   $("#app").innerHTML = header() + '<main class="workspace ' + (state.view === "initiatives" ? "catalog-workspace" : "") + '" id="content">' + views[state.view]() +
     '<footer class="footer"><span>Синтетический город · 5 районов · Горизонт: 2 года</span><span>Создавайте город, в котором хочется жить.</span></footer></main></div>';
   if (focusKey) document.querySelector("[" + focusKey + '="' + CSS.escape(focusValue) + '"]')?.focus({preventScroll:true});
+  if ($("#team-name")) $("#team-name").value = state.teamName;
+  if ($("#demo-code")) $("#demo-code").value = state.demoCode;
   if ($("#scenario-name")) $("#scenario-name").value = state.scenarioName;
 }
 function navigate(view) {
-  if (!["city","initiatives","results","compare","help"].includes(view)) return;
+  if (!["city","initiatives","results","compare","teams","help"].includes(view)) return;
   state.view = view; render(); window.scrollTo({top:0});
   $("#page-title")?.focus({preventScroll:true});
 }
@@ -168,9 +171,23 @@ function districtDetail() {
       return '<div class="category-meter"><div class="row between"><span class="row">' + icon(key) + DIR[key] + '</span><span>' + number(value,1) + '</span></div><div class="meter"><span class="' + (value < 45 ? "warn" : "") + '" style="width:' + value + '%"></span></div></div>';
     }).join("") + '</div><div class="district-action">' + (critical.length ? '<div class="callout warning"><strong>Что требует внимания</strong>' + critical.map(([k,v]) => escape(state.city.indicators[k]) + ': ' + number(v,0)).join(" · ") + '</div>' : '') + '<p class="subtle-note">Направления — среднее двух показателей, шкала 0–100.</p>' + button('Улучшить этот район ' + icon("arrow"),"district-initiatives","primary full") + '</div><details class="disclosure"><summary>Все 10 показателей района</summary>' + indicatorTable(d) + '</details></div></section>';
 }
+
+function eventName(id) { return state.city.events.find(e => e.id === id)?.title || "Обычный сценарий"; }
+function eventPanel() {
+  const event = state.city.events.find(e => e.id === state.eventId);
+  return '<section class="panel event-panel"><div><span class="eyebrow">ДОПОЛНИТЕЛЬНЫЙ РЕЖИМ</span><h2>А если город изменится?</h2><p>' + escape(event.description) + '</p></div><div class="event-controls"><label for="event-select">Условия сценария</label><select id="event-select">' + state.city.events.map(e => '<option value="' + e.id + '" ' + (e.id === state.eventId ? 'selected' : '') + '>' + escape(e.title) + '</option>').join('') + '</select>' + button('Применить условия','set-event','soft') + '</div></section>';
+}
+function teamsView() {
+  const board = state.leaderboard;
+  return heading('ОБЩИЙ РЕЙТИНГ','Город один. Подходы разные.','Все участники начинают со 100 единиц. Баллы заново рассчитывает сервер.',button('Обновить таблицу','refresh-teams')) + stats() +
+    '<section class="panel"><div class="panel-body"><h2>' + escape(eventName(state.eventId)) + '</h2><p class="subtle-note">Рейтинг текущих условий · ' + escape(state.city.ruleset) + '. Другие события сравниваются отдельно. Условия переключаются в обзоре города.</p>' +
+    (board ? (board.entries.length ? '<div class="table-wrap"><table><thead><tr><th>Место</th><th>Команда</th><th>Score</th><th>Бюджет</th><th>Критических</th></tr></thead><tbody>' + board.entries.map((r,i) => '<tr><td>' + (i+1) + '</td><td>' + escape(r.team_name) + '</td><td><strong>' + number(r.score) + '</strong></td><td>' + r.spent + '</td><td>' + r.critical + '</td></tr>').join('') + '</tbody></table></div>' : '<p>Пока нет результатов. Ваша команда может стать первой.</p>') : '<p>Нажмите «Обновить таблицу», чтобы загрузить результаты с сервера.</p>') +
+    '<div class="divider"></div><h2>Отправить текущий план</h2><p>Название и результат будут видны всем посетителям этого сервера. Новая отправка заменит ваш предыдущий результат в этих условиях.</p><label for="team-name">Название команды</label><input id="team-name" maxlength="40" placeholder="Например, 3-Musketeers" autocomplete="off"><div style="margin-top:16px">' + button('Опубликовать результат','submit-team','primary',state.plan.length !== 5 ? 'disabled' : '') + '</div><p class="subtle-note">Нужны 5 допустимых решений. Демонстрационные названия не подтверждают личность. Токен команды хранится в этом браузере: очистка данных лишит возможности обновлять свою запись.</p></div></section>';
+}
+
 function cityView() {
   return heading("ВАША ОЧЕРЕДЬ МЕНЯТЬ ГОРОД","Город начинается с решений","Изучите районы, распределите бюджет и оцените перемены.",
-    button(icon("spark") + "Готовый пример","example")) + stats() +
+    button(icon("spark") + "Готовый пример","example")) + stats() + eventPanel() +
     '<div class="content-grid"><section class="panel"><div class="panel-head"><div><h2>Пять районов. Общий результат.</h2><p>Выберите район на схеме, чтобы узнать, что ему нужно.</p></div><div class="segmented" aria-label="Состояние карты"><button data-map="before" class="' + (state.mapMode === "before" ? "active" : "") + '" aria-pressed="' + (state.mapMode === "before") + '">Сейчас</button><button data-map="after" class="' + (state.mapMode === "after" ? "active" : "") + '" aria-pressed="' + (state.mapMode === "after") + '">С планом</button></div></div>' +
     mapSvg() + '<div class="map-legend"><span class="legend-item"><i class="dot amber"></i>Оценка ниже 50</span><span class="legend-item"><i class="dot blue"></i>Оценка от 50</span><span class="legend-last">Больше — лучше</span></div></section>' + districtDetail() + '</div>' +
     '<div class="steps"><div class="step"><span class="step-num">01</span><div><strong>Поймите свой город</strong><p>У каждого района свои сильные и слабые стороны.</p></div></div><div class="step"><span class="step-num">02</span><div><strong>Выберите пять инициатив</strong><p>100 единиц бюджета. Каждое решение имеет цену.</p></div></div><div class="step"><span class="step-num">03</span><div><strong>Посмотрите, что изменилось</strong><p>Оценка города и AI-разбор ваших решений.</p></div></div></div><div class="row between" style="margin-top:22px"><span class="muted small">' + (state.plan.length ? "В вашем плане: " + state.plan.length + " из 5 решений" : "Начните с самого уязвимого района — Нуры.") + '</span>' + button((state.plan.length === 5 ? "Посмотреть результат" : "Выбрать инициативы") + icon("arrow"),state.plan.length === 5 ? "calculate" : "initiatives","primary") + '</div>';
@@ -192,7 +209,7 @@ function planPanel() {
 function catalogView() {
   const filtered = state.city.measures.filter(m => state.filter === "all" || m.direction === state.filter);
   return heading("ОТ ИДЕИ К ДЕЙСТВИЮ","Во что инвестируем?","Выбирайте инициативы. Их эффект и ограничения видны до добавления.",
-    button(icon("spark") + "Готовый пример","example")) + stats() +
+    button(icon("spark") + "Готовый пример","example")) + stats() + eventPanel() +
     (state.edit !== null ? '<div class="edit-banner"><span>Заменяем: <strong>' + escape(decisionName(state.plan[state.edit])) + '</strong></span>' + button("Отмена","cancel-edit","ghost small") + '</div>' : '') +
     '<div class="catalog-tools" aria-label="Фильтры инициатив">' + [["all","Все инициативы"],...Object.entries(DIR)].map(([key,title]) => '<button class="filter ' + (state.filter === key ? 'active' : '') + '" data-filter="' + key + '" aria-pressed="' + (state.filter === key) + '">' + (key === "all" ? '' : icon(key)) + title + '</button>').join("") + '</div><div class="content-grid"><div class="catalog-grid">' +
     filtered.map(m => {
@@ -215,6 +232,7 @@ function resultsView() {
     r.districts.map(d => '<details class="disclosure"><summary>' + escape(d.name) + ' · ' + number(d.score_before) + ' → ' + number(d.score_after) + '</summary>' + indicatorTable(d) + '</details>').join("") +
     '<p class="subtle-note">' + (r.synergies.length ? "Совместные эффекты: " + r.synergies.map(s => escape(s.pair.join(" + ")) + ' · ' + escape(district(s.district_id).name) + ' · ' + Object.entries(s.effects).map(([k,v]) => escape(state.city.indicators[k]) + ' ' + signed(v)).join(", ")).join("; ") : "В этом плане нет дополнительных совместных эффектов.") + '</p></details></div></section>' +
     recommendationsView() + '</div><div class="stack"><section class="panel"><div class="panel-body"><div class="ai-header"><span class="ai-mark">' + icon("spark") + '</span><div><h2>Взгляд AI-советника</h2><p>Объясняет ваш результат</p></div></div>' + (state.report ? reportView() : '<p class="ai-copy">Что сработало? Чем пришлось пожертвовать? Советник разберёт ваш план на основе рассчитанных показателей.</p>') +
+    '<details class="disclosure"><summary>Код доступа к AI, если выдан командой</summary><label for="demo-code">Демо-код</label><input id="demo-code" type="password" maxlength="128" autocomplete="off" placeholder="Не API-ключ"></details>' +
     button(state.aiBusy ? '<span class="spinner"></span> Анализируем решения…' : icon("spark") + (state.report ? "Обновить анализ" : "Получить AI-анализ"),"analyze","soft full",state.aiBusy ? "disabled" : "") +
     '<p class="subtle-note">Расчёт выполняет модель города. AI объясняет результат и может ошибаться в интерпретации.</p></div></section><section class="panel"><div class="panel-body"><h2 style="font-size:16px">Сохраните свой сценарий</h2><p class="ai-copy">Сравните с другим планом или возьмите результат на презентацию.</p><label class="small muted" for="scenario-name">Название сценария</label><input id="scenario-name" type="text" maxlength="60" placeholder="Например, «Забота о районах»" style="margin:9px 0 13px">' +
     button(icon("compare") + "Сохранить для сравнения","save","full") + '<div style="margin-top:9px">' + button(icon("download") + "Скачать сценарий","export","ghost full") + '</div><p class="subtle-note">До 4 сценариев хранятся в этом браузере. JSON позволяет перенести план на другое устройство.</p></div></section></div></div>';
@@ -227,7 +245,7 @@ function recommendationsView() {
 }
 function reportView() {
   const report = state.report, audit = report.audit;
-  const fallbackReasons = {fallback_no_key:"API-ключ не настроен.",fallback_no_model:"AI-модель не выбрана.",fallback_api_error:"AI-сервис недоступен или его ответ не прошёл проверку."};
+  const fallbackReasons = {fallback_daily_limit:"Дневной лимит AI исчерпан. Расчёт и рекомендации продолжают работать.",fallback_no_key:"API-ключ не настроен.",fallback_no_model:"AI-модель не выбрана.",fallback_api_error:"AI-сервис недоступен или его ответ не прошёл проверку."};
   const claim = c => '<p>' + escape(c.text) + '</p><details><summary>На чём основан вывод</summary>' + c.evidence_ids.map(id => '<p>' + escape(report.facts[id]) + '</p>').join("") + '</details>';
   return '<div class="ai-source">' + (report.source === "openai" ? 'OpenAI · ' + escape(report.model) + (report.cached ? ' · сохранённый ответ' : '') :
     '<div class="callout warning"><strong>Резервный аналитический отчёт</strong>' + (fallbackReasons[report.source] || "AI сейчас недоступен.") + ' Показано локальное объяснение расчёта, не ответ AI.</div>') +
@@ -237,10 +255,10 @@ function reportView() {
     '<details><summary>Ограничения анализа</summary>' + audit.limitations.map(t => '<p>' + escape(t) + '</p>').join("") + '</details></div>';
 }
 function compareView() {
-  return heading("ИЩИТЕ ЛУЧШИЙ БАЛАНС","Несколько планов. Один город.","Сравните свои подходы на одинаковых исходных данных.",
+  return heading("ИЩИТЕ ЛУЧШИЙ БАЛАНС","Несколько планов. Один город.","Сравнивайте баллы только при одинаковых событиях и правилах.",
     '<label class="btn file-label">' + icon("upload") + 'Загрузить JSON<input id="import-file" type="file" accept=".json,application/json" aria-label="Загрузить сценарий JSON"></label>') + stats() +
     (!state.saved.length ? '<div class="empty-state">' + icon("compare") + '<h2>Здесь встретятся ваши идеи</h2><p>Рассчитайте план и сохраните его на экране результата. Затем измените решения и сравните, какой сценарий лучше.</p>' + button("К моему плану","initiatives","primary") + '</div>' :
-      '<div class="saved-cards">' + state.saved.map((s,i) => '<article class="saved-card"><div class="row between"><h3>' + escape(s.name) + '</h3><button class="icon-button" data-action="remove-saved" data-index="' + i + '" aria-label="Удалить сохранённый сценарий ' + escape(s.name) + '">' + icon("close") + '</button></div><div class="saved-score">' + number(s.result.result.score) + ' <span class="pill green">' + signed(s.result.delta_score) + '</span></div><div class="row wrap muted small"><span>Бюджет: ' + s.result.spent + ' / 100</span><span>Критических: ' + s.result.result.critical_count + '</span></div><ol>' + s.scenario.decisions.map(d => '<li>' + escape(decisionName(d)) + '</li>').join("") + '</ol>' + button(icon("undo") + "Открыть сценарий","restore","full",'data-index="' + i + '"') + '</article>').join("") + '</div>') +
+      '<div class="saved-cards">' + state.saved.map((s,i) => '<article class="saved-card"><div class="row between"><h3>' + escape(s.name) + '</h3><button class="icon-button" data-action="remove-saved" data-index="' + i + '" aria-label="Удалить сохранённый сценарий ' + escape(s.name) + '">' + icon("close") + '</button></div><p class="subtle-note">' + escape(eventName(s.scenario.event_id || "none")) + '</p><div class="saved-score">' + number(s.result.result.score) + ' <span class="pill green">' + signed(s.result.delta_score) + '</span></div><div class="row wrap muted small"><span>Бюджет: ' + s.result.spent + ' / 100</span><span>Критических: ' + s.result.result.critical_count + '</span></div><ol>' + s.scenario.decisions.map(d => '<li>' + escape(decisionName(d)) + '</li>').join("") + '</ol>' + button(icon("undo") + "Открыть сценарий","restore","full",'data-index="' + i + '"') + '</article>').join("") + '</div>') +
     '<p class="subtle-note">Сохранения привязаны к этому браузеру. При очистке его данных они исчезнут; скачайте JSON для надёжного хранения.</p>';
 }
 function helpView() {
@@ -340,7 +358,17 @@ async function action(name, el) {
   if (state.busy) return;
   state.busy = true; if (el) {el.disabled = true; el.setAttribute("aria-busy","true");}
   try {
-    if (name === "example" || name === "example-confirmed") {
+    if (name === "set-event") {
+      await changePlan(state.plan, $("#event-select").value); render(); toast("Условия обновлены. План пересчитан в прежнем бюджете.");
+    } else if (name === "refresh-teams") {
+      state.leaderboard = await api("leaderboard?event_id=" + encodeURIComponent(state.eventId)); render();
+    } else if (name === "submit-team") {
+      const teamName = state.teamName.trim();
+      let token = localStorage.getItem("akim-team-token");
+      if (!token) { token = crypto.randomUUID(); localStorage.setItem("akim-team-token", token); }
+      await api("submit", {team_name:teamName, token, scenario:scenario()});
+      state.leaderboard = await api("leaderboard?event_id=" + encodeURIComponent(state.eventId)); render(); toast("Последний результат команды опубликован.");
+    } else if (name === "example" || name === "example-confirmed") {
       $("#confirm-dialog").close(); await changePlan(state.city.example.decisions.map(d => ({...d}))); navigate("initiatives"); toast("Пример загружен. Можно заменить любое решение.");
     } else if (name === "clear-confirmed") {
       $("#confirm-dialog").close(); await changePlan([]); render(); toast("План очищен.");
@@ -360,7 +388,7 @@ async function action(name, el) {
       state.saved.push({name,scenario:result.scenario,result}); persist(); toast("Сценарий «" + name + "» сохранён для сравнения.");
     } else if (name === "restore") {
       const saved = state.saved[Number(el.dataset.index)];
-      await changePlan(saved.scenario.decisions); await calculate(); toast("Сценарий открыт и пересчитан.");
+      await changePlan(saved.scenario.decisions, saved.scenario.event_id || "none"); await calculate(); toast("Сценарий открыт и пересчитан.");
     } else if (name === "remove-saved") {
       const removed = state.saved.splice(Number(el.dataset.index),1)[0]; persist(); render(); toast("Убрано из сравнения: " + removed.name);
     }
@@ -392,12 +420,14 @@ document.addEventListener("change", async e => {
     try { data = JSON.parse((await file.text()).replace(/^\uFEFF/,"")); } catch { throw new Error("Не удалось прочитать JSON. Выберите файл экспортированного сценария."); }
     const checked = await api("preview",data);
     // Validate the original object (including version/ruleset) before using its plan.
-    await changePlan(data.decisions);
+    await changePlan(data.decisions, data.event_id || "none");
     state.projection = checked.projection; navigate("initiatives"); toast("Сценарий проверен и загружен.");
   } catch (e) { toast(e.message); }
   finally { state.busy = false; }
 });
 document.addEventListener("input", e => {
+  if (e.target.id === "team-name") state.teamName = e.target.value.slice(0,40);
+  if (e.target.id === "demo-code") state.demoCode = e.target.value;
   if (e.target.id === "scenario-name") state.scenarioName = e.target.value.slice(0,60);
 });
 
