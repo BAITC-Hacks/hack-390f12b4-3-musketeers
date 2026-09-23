@@ -66,7 +66,7 @@ with left:
     if remaining < 0:
         st.error(f"Превышен бюджет на {-remaining} млн ₸. Измените решения.")
 
-    # При изменении выбора предыдущий результат больше не показывается.
+    # При изменении выбора предыдущий результат больше не показывается
     if st.session_state.get("result", {}).get("selected_ids") != selected_ids:
         st.session_state.pop("result", None)
 
