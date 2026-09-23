@@ -32,6 +32,7 @@ def test_ui_serves_only_public_assets(client):
     assert "script-src 'self'" in page.headers["content-security-policy"]
     assert client.get("/app.js").status_code == 200
     assert client.get("/styles.css").status_code == 200
+    assert client.get("/**").status_code == 404
     for path in ("/.env", "/server.py", "/api/unknown", "/api/analyze"):
         assert client.get(path).status_code == 404
 

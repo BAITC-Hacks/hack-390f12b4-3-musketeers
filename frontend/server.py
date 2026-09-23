@@ -10,6 +10,18 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 
+class SafeStaticFiles(StaticFiles):
+    """Treat invalid Windows filenames in URLs as missing assets."""
+
+    def lookup_path(self, path):
+        try:
+            return super().lookup_path(path)
+        except OSError as exc:
+            if getattr(exc, "winerror", None) == 123:
+                return "", None
+            raise
+
+
 @asynccontextmanager
 async def lifespan(app):
     async with httpx.AsyncClient(
@@ -76,4 +88,4 @@ async def download_scenario(request: Request, payload: str):
                     headers={"Content-Disposition": 'attachment; filename="astana-scenario.json"'})
 
 
-app.mount("/", StaticFiles(directory=Path(__file__).parent / "web", html=True), name="web")
+app.mount("/", SafeStaticFiles(directory=Path(__file__).parent / "web", html=True), name="web")

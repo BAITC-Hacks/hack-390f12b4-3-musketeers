@@ -114,9 +114,9 @@ async function restoreStorage() {
 }
 
 function header() {
-  const titles = {city:"Обзор города",initiatives:"Инициативы",results:"Результат",compare:"Сравнение",teams:"Команды",help:"Как это работает"};
+  const titles = {city:"Обзор города",initiatives:"Инициативы",results:"Результат",analysis:"AI-анализ",compare:"Сравнение",teams:"Команды",help:"Как это работает"};
   return '<aside class="sidebar"><a class="brand" href="#city" data-view="city"><div class="brand-mark">А</div><div><strong>Аким на 5 часов</strong><small>CITY LAB · ASTANA</small></div></a><div class="nav-label">ВАШ ГОРОД</div><nav class="nav" aria-label="Основная навигация">' +
-    [["city","city","Обзор города"],["initiatives","grid","Инициативы"],["results","chart","Результат"],["compare","compare","Сравнение"],["teams","chart","Команды"]].map(([view,i,title]) =>
+    [["city","city","Обзор города"],["initiatives","grid","Инициативы"],["results","chart","Результат"],["analysis","spark","AI-анализ"],["compare","compare","Сравнение"],["teams","chart","Команды"]].map(([view,i,title]) =>
       '<button class="nav-button ' + (state.view === view ? "active" : "") + '" data-view="' + view + '" aria-label="' + title + '" ' + (state.view === view ? 'aria-current="page"' : '') + '>' + icon(i) + '<span>' + title + '</span>' + (view === "initiatives" ? '<span class="nav-count">14</span>' : '') + '</button>').join("") +
     '</nav><div class="sidebar-bottom"><button class="nav-button ' + (state.view === "help" ? "active" : "") + '" data-view="help" aria-label="Как это работает">' + icon("help") + '<span>Как это работает</span></button><div class="sandbox-note"><strong>Маленькая модель.<br>Большие решения.</strong>Исследуйте, как ваш выбор меняет жизнь города.</div><div class="team">HACKALEM AI · 3-MUSKETEERS</div></div></aside>' +
     '<div class="shell"><header class="topbar"><div class="breadcrumb"><span>Симулятор</span><span>/</span><strong>' + titles[state.view] + '</strong></div><div class="mobile-brand"><span class="brand-mark">А</span>Аким на 5 часов</div><div class="topbar-end"><span class="status">Учебная симуляция</span>' + button(icon("help") + "Правила", "help", "ghost small") + '<div class="avatar" title="Локальный сценарий">АК</div></div></header>';
@@ -132,7 +132,7 @@ function render() {
   const active = document.activeElement;
   const focusKey = ["data-filter","data-district","data-map"].find(key => active?.hasAttribute(key));
   const focusValue = focusKey && active.getAttribute(focusKey);
-  const views = {city:cityView, initiatives:catalogView, results:resultsView, compare:compareView, teams:teamsView, help:helpView};
+  const views = {city:cityView, initiatives:catalogView, results:resultsView, analysis:analysisView, compare:compareView, teams:teamsView, help:helpView};
   $("#app").innerHTML = header() + '<main class="workspace ' + (state.view === "initiatives" ? "catalog-workspace" : "") + '" id="content">' + views[state.view]() +
     '<footer class="footer"><span>Синтетический город · 5 районов · Горизонт: 2 года</span><span>Создавайте город, в котором хочется жить.</span></footer></main></div>';
   if (focusKey) document.querySelector("[" + focusKey + '="' + CSS.escape(focusValue) + '"]')?.focus({preventScroll:true});
@@ -141,7 +141,7 @@ function render() {
   if ($("#scenario-name")) $("#scenario-name").value = state.scenarioName;
 }
 function navigate(view) {
-  if (!["city","initiatives","results","compare","teams","help"].includes(view)) return;
+  if (!["city","initiatives","results","analysis","compare","teams","help"].includes(view)) return;
   state.view = view; render(); window.scrollTo({top:0});
   $("#page-title")?.focus({preventScroll:true});
 }
@@ -220,7 +220,7 @@ function catalogView() {
 }
 
 function resultsView() {
-  let html = heading("КАЖДОЕ РЕШЕНИЕ ИМЕЕТ ЗНАЧЕНИЕ","Что изменит ваш план","Результаты расчёта, изменения районов и взгляд AI-советника.",
+  let html = heading("КАЖДОЕ РЕШЕНИЕ ИМЕЕТ ЗНАЧЕНИЕ","Что изменит ваш план","Результаты расчёта и изменения районов. Объяснение решений — на отдельном экране AI-анализа.",
     button(icon("edit") + "Изменить план","initiatives")) + stats();
   if (!state.result) return html + '<div class="empty-state">' + icon("chart") + '<h2>' + (state.plan.length === 5 ? "Ваш план готов к оценке" : "Сначала соберём план города") + '</h2><p>' + (state.plan.length === 5 ? "Пять решений выбраны. Рассчитайте итог и получите объяснение результата." : "Выберите ровно пять инициатив в пределах бюджета. Прогноз уже отображается наверху.") + '</p>' + button(state.plan.length === 5 ? "Рассчитать результат" : "Перейти к инициативам",state.plan.length === 5 ? "calculate" : "initiatives","primary") + '</div>';
   const r = state.result;
@@ -232,11 +232,17 @@ function resultsView() {
     '<div class="row muted small"><span class="legend-item"><i class="dot" style="background:#e4eaf3"></i>Сейчас</span><span class="legend-item"><i class="dot" style="background:#739aed"></i>С вашим планом</span></div><details class="disclosure"><summary>Подробные показатели и совместные эффекты</summary>' +
     r.districts.map(d => '<details class="disclosure"><summary>' + escape(d.name) + ' · ' + number(d.score_before) + ' → ' + number(d.score_after) + '</summary>' + indicatorTable(d) + '</details>').join("") +
     '<p class="subtle-note">' + (r.synergies.length ? "Совместные эффекты: " + r.synergies.map(s => escape(s.pair.join(" + ")) + ' · ' + escape(district(s.district_id).name) + ' · ' + Object.entries(s.effects).map(([k,v]) => escape(state.city.indicators[k]) + ' ' + signed(v)).join(", ")).join("; ") : "В этом плане нет дополнительных совместных эффектов.") + '</p></details></div></section>' +
-    recommendationsView() + '</div><div class="stack"><section class="panel"><div class="panel-body"><div class="ai-header"><span class="ai-mark">' + icon("spark") + '</span><div><h2>Взгляд AI-советника</h2><p>Объясняет ваш результат</p></div></div>' + (state.report ? reportView() : '<p class="ai-copy">Что сработало? Чем пришлось пожертвовать? Советник разберёт ваш план на основе рассчитанных показателей.</p>') +
-    '<details class="disclosure"><summary>Код доступа к AI, если выдан командой</summary><label for="demo-code">Демо-код</label><input id="demo-code" type="password" maxlength="128" autocomplete="off" placeholder="Не API-ключ"></details>' +
-    button(state.aiBusy ? '<span class="spinner"></span> Анализируем решения…' : icon("spark") + (state.report ? "Обновить анализ" : "Получить AI-анализ"),"analyze","soft full",state.aiBusy ? "disabled" : "") +
-    '<p class="subtle-note">Расчёт выполняет модель города. AI объясняет результат и может ошибаться в интерпретации.</p></div></section><section class="panel"><div class="panel-body"><h2 style="font-size:16px">Сохраните свой сценарий</h2><p class="ai-copy">Сравните с другим планом или возьмите результат на презентацию.</p><label class="small muted" for="scenario-name">Название сценария</label><input id="scenario-name" type="text" maxlength="60" placeholder="Например, «Забота о районах»" style="margin:9px 0 13px">' +
+    recommendationsView() + '</div><div class="stack"><section class="panel analysis-teaser"><div class="panel-body"><div class="ai-header"><span class="ai-mark">' + icon("spark") + '</span><div><h2>AI-анализ плана</h2><p>Отдельное объяснение ваших решений</p></div></div><p class="ai-copy">Разберите сильные стороны, риски и рекомендации на отдельном экране. Итоговые числа уже рассчитаны моделью города.</p>' +
+    button(icon("spark") + "Открыть AI-анализ " + icon("arrow"),"analysis","primary full") + '</div></section><section class="panel"><div class="panel-body"><h2 style="font-size:16px">Сохраните свой сценарий</h2><p class="ai-copy">Сравните с другим планом или возьмите результат на презентацию.</p><label class="small muted" for="scenario-name">Название сценария</label><input id="scenario-name" type="text" maxlength="60" placeholder="Например, «Забота о районах»" style="margin:9px 0 13px">' +
     button(icon("compare") + "Сохранить для сравнения","save","full") + '<div style="margin-top:9px">' + button(icon("download") + "Скачать сценарий","export","ghost full") + '</div><p class="subtle-note">До 4 сценариев хранятся в этом браузере. JSON позволяет перенести план на другое устройство.</p></div></section></div></div>';
+}
+function analysisView() {
+  const html = heading("ОБЪЯСНЕНИЕ СЦЕНАРИЯ","AI-анализ решений","Сильные стороны, риски и возможные улучшения вашего плана — отдельно от числового результата.",
+    button("К результату " + icon("arrow"),"results")) + stats();
+  if (!state.result) return html + '<div class="empty-state">' + icon("spark") + '<h2>Сначала рассчитайте план</h2><p>AI разбирает только проверенный сценарий из пяти решений. Числа и бюджет рассчитываются до анализа.</p>' + button(state.plan.length === 5 ? "Рассчитать результат" : "Выбрать инициативы",state.plan.length === 5 ? "calculate" : "initiatives","primary") + '</div>';
+  return html + '<div class="analysis-layout"><div class="analysis-intro"><span class="eyebrow">КАК ЧИТАТЬ ЭТОТ РАЗБОР</span><p>Сначала — общий вывод. Затем — что сработало, какие компромиссы остались и что можно улучшить. Под каждым тезисом можно открыть данные, на которых он основан.</p><p class="subtle-note">Score и стоимость всегда считает математическая модель. AI только объясняет результат и может ошибаться в интерпретации.</p></div><div class="analysis-controls"><details class="disclosure"><summary>Есть демо-код для AI?</summary><label for="demo-code">Демо-код команды</label><input id="demo-code" type="password" maxlength="128" autocomplete="off" placeholder="Не API-ключ"></details>' +
+    button(state.aiBusy ? '<span class="spinner"></span> Готовим разбор…' : icon("spark") + (state.report ? "Обновить анализ" : "Сформировать AI-анализ"),"analyze","primary full",state.aiBusy ? "disabled" : "") + '</div></div>' +
+    (state.report ? reportView() : '<div class="analysis-pending"><span class="eyebrow">РАЗБОР ЕЩЁ НЕ ЗАПРОШЕН</span><h2>Посмотрим, что стоит за баллом ' + number(state.result.result.score) + '</h2><p>Нажмите «Сформировать AI-анализ». При недоступности AI вы увидите явно обозначенный локальный отчёт.</p></div>');
 }
 function recommendationsView() {
   return '<section class="panel"><div class="panel-head"><div><h2>А можно ещё лучше?</h2><p>Проверим, что даст замена одного решения.</p></div></div><div class="panel-body" style="padding-top:0">' +
@@ -247,13 +253,14 @@ function recommendationsView() {
 function reportView() {
   const report = state.report, audit = report.audit;
   const fallbackReasons = {fallback_daily_limit:"Дневной лимит AI исчерпан. Расчёт и рекомендации продолжают работать.",fallback_no_key:"API-ключ не настроен.",fallback_no_model:"AI-модель не выбрана.",fallback_api_error:"AI-сервис недоступен или его ответ не прошёл проверку."};
-  const claim = c => '<p>' + escape(c.text) + '</p><details><summary>На чём основан вывод</summary>' + c.evidence_ids.map(id => '<p>' + escape(report.facts[id]) + '</p>').join("") + '</details>';
-  return '<div class="ai-source">' + (report.source === "openai" ? 'OpenAI · ' + escape(report.model) + (report.cached ? ' · сохранённый ответ' : '') :
-    '<div class="callout warning"><strong>Резервный аналитический отчёт</strong>' + (fallbackReasons[report.source] || "AI сейчас недоступен.") + ' Показано локальное объяснение расчёта, не ответ AI.</div>') +
-    '</div><div class="ai-report">' + claim(audit.summary) +
-    [["strengths","Сильные стороны"],["tradeoffs","Компромиссы"],["remaining_problems","Что ещё требует внимания"]].map(([key,title]) => audit[key].length ? '<h3>' + title + '</h3>' + audit[key].map(claim).join("") : '').join("") +
-    (audit.recommendations.length ? '<h3>Рекомендации</h3>' + audit.recommendations.map(r => '<p>' + escape(report.facts["candidate:" + r.candidate_id]) + '</p>').join("") : '') +
-    '<details><summary>Ограничения анализа</summary>' + audit.limitations.map(t => '<p>' + escape(t) + '</p>').join("") + '</details></div>';
+  const claim = c => '<div class="analysis-claim"><p>' + escape(c.text) + '</p><details><summary>На чём основан вывод</summary>' + c.evidence_ids.map(id => '<p>' + escape(report.facts[id]) + '</p>').join("") + '</details></div>';
+  const group = (key,title,num) => '<section class="analysis-group"><span class="eyebrow">' + num + '</span><h2>' + title + '</h2>' + (audit[key].length ? audit[key].map(claim).join("") : '<p class="muted">Отдельных выводов для этого раздела нет.</p>') + '</section>';
+  return '<div class="analysis-source">' + (report.source === "openai" ? '<strong>Анализ OpenAI · ' + escape(report.model) + '</strong>' + (report.cached ? ' · сохранённый ответ' : '') :
+    '<strong>Резервный аналитический отчёт</strong><span>' + (fallbackReasons[report.source] || "AI сейчас недоступен.") + ' Показано локальное объяснение расчёта, не ответ AI.</span>') +
+    '</div><div class="analysis-report"><section class="analysis-summary"><span class="eyebrow">ГЛАВНЫЙ ВЫВОД</span>' + claim(audit.summary) + '</section><div class="analysis-groups">' +
+    group("strengths","Что сработало","01") + group("tradeoffs","Компромиссы","02") + group("remaining_problems","Что требует внимания","03") + '</div>' +
+    '<section class="analysis-group analysis-recommendations"><span class="eyebrow">04</span><h2>Рекомендации</h2>' + (audit.recommendations.length ? '<ol>' + audit.recommendations.map(r => { const [summary, changes] = String(report.facts["candidate:" + r.candidate_id] || "").split("Изменения относительно текущего плана:"); return '<li><p>' + escape(summary.trim()) + '</p>' + (changes ? '<details><summary>Показать изменения районов</summary><p>' + escape(changes.trim()) + '</p></details>' : '') + '</li>'; }).join("") + '</ol>' : '<p class="muted">Проверенные замены не дали улучшения. Попробуйте изменить несколько решений вручную.</p>') + '</section>' +
+    '<details class="analysis-limitations"><summary>Ограничения анализа</summary>' + audit.limitations.map(t => '<p>' + escape(t) + '</p>').join("") + '</details></div>';
 }
 function compareView() {
   return heading("ИЩИТЕ ЛУЧШИЙ БАЛАНС","Несколько планов. Один город.","Сравнивайте баллы только при одинаковых событиях и правилах.",
@@ -345,6 +352,8 @@ async function action(name, el) {
   if (name === "show-plan") return $(".plan-panel").scrollIntoView({behavior:"smooth",block:"start"});
   if (name === "help") return navigate("help");
   if (name === "initiatives") return navigate("initiatives");
+  if (name === "results") return navigate("results");
+  if (name === "analysis") return navigate("analysis");
   if (name === "close-modal") return closeModal();
   if (name === "close-confirm") return $("#confirm-dialog").close();
   if (name === "export") return exportPlan();

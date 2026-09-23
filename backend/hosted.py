@@ -3,11 +3,10 @@ import json
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response
-from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from backend.main import app as api, check, body_limit
 from backend.engine import Scenario
-from frontend.server import headers
+from frontend.server import SafeStaticFiles, headers
 
 app = FastAPI(title="Аким на 5 часов", version="2.1.0")
 app.include_router(api.router)
@@ -28,4 +27,4 @@ def download(payload: str):
                     media_type="application/json", headers={"Content-Disposition": 'attachment; filename="astana-scenario.json"'})
 
 
-app.mount("/", StaticFiles(directory=Path(__file__).resolve().parents[1] / "frontend/web", html=True), name="web")
+app.mount("/", SafeStaticFiles(directory=Path(__file__).resolve().parents[1] / "frontend/web", html=True), name="web")

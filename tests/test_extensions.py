@@ -80,6 +80,7 @@ def test_hosted_entrypoint_assets_and_download():
     assert client.get("/").status_code == 200
     assert client.get("/.env").status_code == 404
     assert client.get("/backend/main.py").status_code == 404
+    assert client.get("/**").status_code == 404
     assert client.get("/api/health").status_code == 200
     result = client.get("/download/scenario", params={"payload": EXAMPLE.model_dump_json()})
     assert result.json() == EXAMPLE.model_dump()
