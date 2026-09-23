@@ -97,6 +97,10 @@ def test_generated_numbers_and_unverified_recommendations_rejected():
     with pytest.raises(ValueError):
         advisor.validate_audit(audit, facts, recs["candidates"])
     audit.summary.text = "Сценарий улучшает показатели."
+    audit.summary.evidence_ids = ["candidate:" + recs["candidates"][0]["id"]]
+    with pytest.raises(ValueError):
+        advisor.validate_audit(audit, facts, recs["candidates"])
+    audit.summary.evidence_ids = ["score"]
     audit.recommendations[0].candidate_id = "invented"
     with pytest.raises(ValueError):
         advisor.validate_audit(audit, facts, recs["candidates"])

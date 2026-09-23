@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict
 from backend.engine import CATALOG, DATA, DISTRICTS, Scenario, canonical
 
 logger = logging.getLogger(__name__)
-PROMPT_VERSION = "evidence-v1"
+PROMPT_VERSION = "evidence-v6"
 CACHE = OrderedDict()
 CACHE_LOCK = Lock()
 
@@ -28,7 +28,6 @@ class Claim(BaseModel):
 class Recommendation(BaseModel):
     model_config = ConfigDict(extra="forbid")
     candidate_id: str
-    explanation: str
 
 
 class Audit(BaseModel):
@@ -44,12 +43,15 @@ class Audit(BaseModel):
 def facts_for(result, recommendations):
     facts = {
         "score": f"Score: {result['baseline']['score']:.5f} → {result['result']['score']:.5f}; изменение {result['delta_score']:+.5f}.",
-        "budget": f"Стоимость: {result['spent']}; остаток: {result['remaining']}. Остаток бонуса не даёт.",
-        "critical": f"Критических значений (<40): {result['baseline']['critical_count']} → {result['result']['critical_count']}.",
-        "weakest": f"Слабейшие районы: {', '.join(DISTRICTS[d]['name'] for d in result['result']['weakest_ids'])}; минимальный балл {result['result']['minimum']:.5f}.",
+        "budget": f"Общий бюджет фиксирован: 100, он не изменился. Расход: {result['spent']}; остаток: {result['remaining']}. Остаток бонуса не даёт.",
+        "critical": f"Критических значений (<40): {result['baseline']['critical_count']} → {result['result']['critical_count']}. Выход из критической зоны модели не означает полного решения реальных проблем.",
+        "weakest": f"Слабейшие районы после мер: {', '.join(DISTRICTS[d]['name'] for d in result['result']['weakest_ids'])}; минимум по городу {result['baseline']['minimum']:.5f} → {result['result']['minimum']:.5f}.",
         "decomposition": f"Вклад среднего: {result['decomposition']['average']:+.5f}; минимума: {result['decomposition']['weakest']:+.5f}; снятия штрафа: {result['decomposition']['critical']:+.5f}.",
-        "limits": "Данные синтетические. Горизонт — восемь кварталов; лаг учтён. Эксплуатационные расходы, реальные сроки и причинные эффекты не подтверждены.",
+        "limits": "Данные синтетические. Горизонт — восемь кварталов; лаг учтён. Эксплуатационные расходы, реальные сроки и причинные эффекты не подтверждены. Порог комфортности не задан; есть только порог критичности. Будущие последствия вне горизонта не моделируются.",
+        "rules": "Сценарий уже завершён: выбрано ровно пять решений. Добавлять шестое нельзя. Остаток бюджета не финансирует дополнительные проекты в этом сценарии; доступны только проверенные замены из списка кандидатов. Улучшение показателя не означает полного решения проблемы.",
     }
+    covered = sorted({CATALOG[m["measure_id"]]["direction"] for m in result["contributions"]})
+    facts["coverage"] = "Выбранные направления: " + ", ".join(DATA["directions"][d] for d in covered) + ". Нельзя называть эти направления неохваченными. Районный охват указан отдельно у каждой меры."
     for district in result["districts"]:
         changes = "; ".join(f"{DATA['indicators'][k]}: {district['before'][k]} → {district['after'][k]}" for k in DATA["weights"] if district["delta"][k])
         facts["district:" + district["id"]] = f"{district['name']}: {district['score_before']:.5f} → {district['score_after']:.5f}. {changes or 'Изменений нет.'}"
@@ -64,7 +66,8 @@ def facts_for(result, recommendations):
             name = CATALOG[decision["measure_id"]]["title"]
             target = DISTRICTS[decision["district_id"]]["name"] if decision["district_id"] else "весь город"
             return f"«{name}» ({target})"
-        facts["candidate:" + candidate["id"]] = f"Замена {describe(candidate['removed'])} на {describe(candidate['added'])}: Score {candidate['score']:.2f}, прирост {candidate['gain']:+.2f}, стоимость {candidate['spent']}, критических значений {candidate['critical_count']}."
+        changes = "; ".join(f"{DISTRICTS[c['district_id']]['name']}: {DATA['indicators'][c['indicator']]} {c['delta']:+g}" for c in candidate["changes"])
+        facts["candidate:" + candidate["id"]] = f"Замена {describe(candidate['removed'])} на {describe(candidate['added'])}: Score {candidate['score']:.2f}, прирост {candidate['gain']:+.2f}, стоимость {candidate['spent']}, критических значений {candidate['critical_count']}. Изменения относительно текущего плана: {changes}."
     return facts
 
 
@@ -81,7 +84,7 @@ def fallback(result, recommendations):
         "strengths": [{"text": "Расчёт учитывает средний результат, положение слабейшего района и критические показатели.", "evidence_ids": ["decomposition", "critical"]}],
         "tradeoffs": tradeoffs,
         "remaining_problems": problems,
-        "recommendations": [{"candidate_id": c["id"], "explanation": "Эта замена проверена движком: правила соблюдены, итоговый балл выше."} for c in recommendations["candidates"]],
+        "recommendations": [{"candidate_id": c["id"]} for c in recommendations["candidates"]],
         "limitations": ["Синтетическая учебная модель; эксплуатационные расходы не учитываются. Результат не является прогнозом для реальной Астаны."],
     }
 
@@ -91,15 +94,21 @@ def validate_audit(audit: Audit, facts: dict, candidates: list[dict]):
     if not audit.strengths or not audit.tradeoffs or not audit.limitations:
         raise ValueError("Empty required analysis sections")
     for claim in claims:
-        if not claim.text.strip() or len(claim.text) > 1500 or not claim.evidence_ids or not set(claim.evidence_ids) <= facts.keys():
+        if not claim.text.strip() or len(claim.text) > 1500 or not claim.evidence_ids or not set(claim.evidence_ids) <= facts.keys() or any(key.startswith("candidate:") for key in claim.evidence_ids):
             raise ValueError("Unsupported evidence reference")
     allowed = {c["id"] for c in candidates}
     if any(r.candidate_id not in allowed for r in audit.recommendations):
         raise ValueError("Unverified recommendation")
-    # Numbers are rendered from evidence, never from generated prose.
-    texts = [c.text for c in claims] + [r.explanation for r in audit.recommendations] + audit.limitations
-    if any(re.search(r"\d", text) or len(text) > 1500 for text in texts):
-        raise ValueError("Generated numerical claim")
+    # Generated numbers may only quote their cited facts, including display rounding.
+    def numbers(text):
+        return [float(n.replace(",", ".")) for n in re.findall(r"[+-]?\d+(?:[.,]\d+)?", text)]
+    for claim in claims:
+        known = numbers(" ".join(facts[key] for key in claim.evidence_ids))
+        allowed_numbers = {value for n in known for value in (n, round(n, 2))}
+        if any(n not in allowed_numbers for n in numbers(claim.text)):
+            raise ValueError("Generated numerical claim")
+    if any(re.search(r"\d", text) or len(text) > 1500 for text in audit.limitations):
+        raise ValueError("Unsupported limitation")
 
 
 def analyze(scenario: Scenario, result: dict, recommendations: dict) -> dict:
@@ -112,6 +121,10 @@ def analyze(scenario: Scenario, result: dict, recommendations: dict) -> dict:
     if not model:
         return {**base, "source": "fallback_no_model"}
     cache_key = canonical(scenario) + "|" + model + "|" + PROMPT_VERSION
+    current_facts = {k: v for k, v in facts.items() if not k.startswith("candidate:")}
+    schema = Audit.model_json_schema()
+    schema["$defs"]["Claim"]["properties"]["evidence_ids"]["items"]["enum"] = list(current_facts)
+    candidate_metrics = [{k: c[k] for k in ("id", "score", "gain", "spent", "critical_count", "minimum")} for c in recommendations["candidates"]]
     # One in-flight call for this prototype; identical requests reuse the result.
     with CACHE_LOCK:
         cached = CACHE.get(cache_key)
@@ -125,16 +138,28 @@ def analyze(scenario: Scenario, result: dict, recommendations: dict) -> dict:
                         "Ты аналитик синтетического городского симулятора. Пиши кратко по-русски. "
                         "Объясни сильные стороны, компромиссы и оставшиеся проблемы. "
                         "Каждый тезис связывай с существующими evidence_ids из facts. "
-                        "Не вычисляй и не придумывай чисел: текст должен быть без цифр, "
-                        "пользователь видит числовые факты отдельно. Не называй коды мер в тексте. "
+                        "Не вычисляй и не придумывай чисел. Предпочитай качественное объяснение: "
+                        "пользователь видит числовые факты отдельно. Если число необходимо, "
+                        "копируй его из цитируемого факта без арифметики. "
+                        "Называй Score баллом, а не коэффициентом. Не называй коды мер в тексте. "
                         "Рекомендуй только candidate_id из verified_candidates. "
                         "Если кандидатов нет, верни пустой recommendations. "
                         "Не представляй эффект реальным прогнозом, не обещай исчезновения проблем. "
-                        "Различай факты расчёта и ограничения модели. До трёх пунктов в каждой секции."
+                        "Сценарий уже содержит все разрешённые решения: не предлагай добавлять новые "
+                        "проекты на остаток бюджета. Разрешены только проверенные замены. "
+                        "Не называй выбранные направления неохваченными: смотри coverage и меры. "
+                        "Не выдумывай ухудшение или причинный эффект в районах, на которые мера не действует. "
+                        "Не делай выводов о последствиях вне горизонта модели. "
+                        "Не придумывай субъективное восприятие, общественное мнение или новые проблемы. "
+                        "Каждый тезис должен прямо следовать из цитируемого факта. "
+                        "Рекомендации содержат только выбранные candidate_id: описание конкретных "
+                        "эффектов сформирует сервер. Не описывай эффект альтернатив в других секциях. "
+                        "Различай факты расчёта и ограничения модели. Один-два коротких пункта в каждой секции. "
+                        "Не повторяй одни и те же мысли в разных секциях."
                     ),
-                    input=json.dumps({"facts": facts, "verified_candidates": recommendations["candidates"]}, ensure_ascii=False),
+                    input=json.dumps({"facts": current_facts, "verified_candidates": candidate_metrics}, ensure_ascii=False),
                     text={"format": {"type": "json_schema", "name": "city_analysis",
-                                     "strict": True, "schema": Audit.model_json_schema()}},
+                                     "strict": True, "schema": schema}},
                 )
             if response.status != "completed":
                 raise ValueError("Incomplete response")
