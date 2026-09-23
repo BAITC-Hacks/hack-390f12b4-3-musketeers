@@ -1,37 +1,353 @@
 {
-  "total_budget": 100,
+  "version": "dataset-v1",
+  "budget": 100,
+  "horizon": 8,
+  "weights": {
+    "T1": 0.1,
+    "T2": 0.1,
+    "E1": 0.09,
+    "E2": 0.11,
+    "S1": 0.11,
+    "S2": 0.11,
+    "B1": 0.09,
+    "B2": 0.09,
+    "C1": 0.1,
+    "C2": 0.1
+  },
+  "directions": {
+    "transport": "Транспорт",
+    "ecology": "Озеленение и экология",
+    "social": "Социальная инфраструктура",
+    "safety": "Безопасность",
+    "services": "Городские сервисы"
+  },
+  "indicators": {
+    "T1": "Разгрузка дорог",
+    "T2": "Доступность общественного транспорта",
+    "E1": "Озеленение",
+    "E2": "Качество воздуха",
+    "S1": "Школы и детсады",
+    "S2": "Поликлиники и первичная помощь",
+    "B1": "Безопасность улиц",
+    "B2": "Безопасность дорожного движения",
+    "C1": "Надёжность ЖКХ",
+    "C2": "Скорость решения обращений"
+  },
   "districts": [
-    {"name": "Есиль", "transport": 53.5, "greening": 70, "social": 51.5, "safety": 69, "services": 72.5},
-    {"name": "Нура", "transport": 47.5, "greening": 55, "social": 36.5, "safety": 52.5, "services": 55},
-    {"name": "Алматы", "transport": 57.5, "greening": 52.5, "social": 62.5, "safety": 57, "services": 55},
-    {"name": "Байконур", "transport": 60, "greening": 52.5, "social": 59, "safety": 55, "services": 56.5},
-    {"name": "Сарыарка", "transport": 60, "greening": 41, "social": 65, "safety": 56.5, "services": 50}
+    {
+      "id": "yesil",
+      "name": "Есиль",
+      "population": 0.27,
+      "values": {
+        "T1": 45,
+        "T2": 62,
+        "E1": 68,
+        "E2": 72,
+        "S1": 48,
+        "S2": 55,
+        "B1": 78,
+        "B2": 60,
+        "C1": 75,
+        "C2": 70
+      },
+      "profile": "Пробки на мостах и переполненные школы."
+    },
+    {
+      "id": "almaty",
+      "name": "Алматы",
+      "population": 0.24,
+      "values": {
+        "T1": 40,
+        "T2": 75,
+        "E1": 50,
+        "E2": 55,
+        "S1": 60,
+        "S2": 65,
+        "B1": 62,
+        "B2": 52,
+        "C1": 50,
+        "C2": 60
+      },
+      "profile": "Старые сети ЖКХ и пробки."
+    },
+    {
+      "id": "saryarka",
+      "name": "Сарыарка",
+      "population": 0.2,
+      "values": {
+        "T1": 50,
+        "T2": 70,
+        "E1": 42,
+        "E2": 40,
+        "S1": 62,
+        "S2": 68,
+        "B1": 58,
+        "B2": 55,
+        "C1": 45,
+        "C2": 55
+      },
+      "profile": "Смог от частного сектора и слабое озеленение."
+    },
+    {
+      "id": "baikonur",
+      "name": "Байконур",
+      "population": 0.13,
+      "values": {
+        "T1": 52,
+        "T2": 68,
+        "E1": 55,
+        "E2": 50,
+        "S1": 58,
+        "S2": 60,
+        "B1": 52,
+        "B2": 58,
+        "C1": 55,
+        "C2": 58
+      },
+      "profile": "Умеренные показатели без ярких перекосов."
+    },
+    {
+      "id": "nura",
+      "name": "Нура",
+      "population": 0.16,
+      "values": {
+        "T1": 55,
+        "T2": 40,
+        "E1": 45,
+        "E2": 65,
+        "S1": 38,
+        "S2": 35,
+        "B1": 55,
+        "B2": 50,
+        "C1": 60,
+        "C2": 50
+      },
+      "profile": "Критические значения школ и первичной медицинской помощи."
+    }
   ],
-  "initiatives": {
-    "transport": [
-      {"id": "t1", "title": "Пилот выделенных автобусных полос", "cost": 15, "impact": {"transport": 12, "greening": 2}},
-      {"id": "t2", "title": "Адаптивные светофоры на загруженных перекрёстках", "cost": 20, "impact": {"transport": 16, "safety": 5}},
-      {"id": "t3", "title": "Тёплые остановки и усиление зимних маршрутов", "cost": 25, "impact": {"transport": 20, "services": 5}}
-    ],
-    "greening": [
-      {"id": "g1", "title": "Озеленение дворов морозостойкими деревьями", "cost": 10, "impact": {"greening": 10, "social": 2}},
-      {"id": "g2", "title": "Ветрозащитные зелёные полосы", "cost": 20, "impact": {"greening": 16, "safety": 4}},
-      {"id": "g3", "title": "Скверы с поливом и уходом за саженцами", "cost": 25, "impact": {"greening": 20, "social": 5}}
-    ],
-    "social": [
-      {"id": "so1", "title": "Бесплатные секции при районных школах", "cost": 10, "impact": {"social": 10, "safety": 2}},
-      {"id": "so2", "title": "Дополнительные кабинеты первичной медпомощи", "cost": 20, "impact": {"social": 17, "services": 3}},
-      {"id": "so3", "title": "Дополнительные дошкольные группы", "cost": 25, "impact": {"social": 22, "services": 3}}
-    ],
-    "safety": [
-      {"id": "sa1", "title": "Освещение пешеходных переходов", "cost": 10, "impact": {"safety": 12, "transport": 2}},
-      {"id": "sa2", "title": "Камеры и освещение проблемных дворов", "cost": 20, "impact": {"safety": 18, "services": 3}},
-      {"id": "sa3", "title": "Безопасные школьные маршруты и борьба с гололёдом", "cost": 25, "impact": {"safety": 22, "transport": 4}}
-    ],
-    "services": [
-      {"id": "sv1", "title": "Диспетчеризация обращений жителей в iKomek", "cost": 10, "impact": {"services": 12, "social": 2}},
-      {"id": "sv2", "title": "Аварийные бригады теплосетей и зимний резерв", "cost": 20, "impact": {"services": 18, "safety": 5}},
-      {"id": "sv3", "title": "Датчики утечек и профилактика аварий теплосетей", "cost": 25, "impact": {"services": 22, "greening": 3}}
-    ]
-  }
+  "measures": [
+    {
+      "id": "M1",
+      "direction": "transport",
+      "title": "Выделенные полосы для автобусов",
+      "scope": "district",
+      "cost": 18,
+      "lag": 2,
+      "effects": {
+        "T1": 6,
+        "T2": 9
+      }
+    },
+    {
+      "id": "M2",
+      "direction": "transport",
+      "title": "Умные светофоры",
+      "scope": "city",
+      "cost": 22,
+      "lag": 2,
+      "effects": {
+        "T1": 4,
+        "B2": 3
+      }
+    },
+    {
+      "id": "M3",
+      "direction": "transport",
+      "title": "Линия ЛРТ / расширение",
+      "scope": "district",
+      "cost": 30,
+      "lag": 4,
+      "effects": {
+        "T1": 16,
+        "T2": 20,
+        "E2": 4
+      }
+    },
+    {
+      "id": "M4",
+      "direction": "ecology",
+      "title": "Парк / сквер",
+      "scope": "district",
+      "cost": 15,
+      "lag": 2,
+      "effects": {
+        "E1": 12,
+        "E2": 3,
+        "B1": 2
+      }
+    },
+    {
+      "id": "M5",
+      "direction": "ecology",
+      "title": "Перевод частного сектора на чистое топливо",
+      "scope": "district",
+      "cost": 25,
+      "lag": 3,
+      "effects": {
+        "E2": 14,
+        "C1": 4
+      }
+    },
+    {
+      "id": "M6",
+      "direction": "ecology",
+      "title": "Городская программа озеленения и ветрозащитных полос",
+      "scope": "city",
+      "cost": 20,
+      "lag": 4,
+      "effects": {
+        "E1": 5,
+        "E2": 3
+      }
+    },
+    {
+      "id": "M7",
+      "direction": "social",
+      "title": "Школа + детсад (модульное строительство)",
+      "scope": "district",
+      "cost": 24,
+      "lag": 3,
+      "effects": {
+        "S1": 16
+      }
+    },
+    {
+      "id": "M8",
+      "direction": "social",
+      "title": "Центр семейного здоровья / поликлиника",
+      "scope": "district",
+      "cost": 20,
+      "lag": 3,
+      "effects": {
+        "S2": 14
+      }
+    },
+    {
+      "id": "M9",
+      "direction": "social",
+      "title": "Дворовые спорт-хабы",
+      "scope": "district",
+      "cost": 10,
+      "lag": 1,
+      "effects": {
+        "S1": 3,
+        "S2": 3,
+        "B1": 3
+      }
+    },
+    {
+      "id": "M10",
+      "direction": "safety",
+      "title": "Освещение и камеры (расширение Safe City)",
+      "scope": "district",
+      "cost": 12,
+      "lag": 1,
+      "effects": {
+        "B1": 12,
+        "B2": 2
+      }
+    },
+    {
+      "id": "M11",
+      "direction": "safety",
+      "title": "Безопасные переходы и школьные зоны",
+      "scope": "district",
+      "cost": 10,
+      "lag": 1,
+      "effects": {
+        "B2": 12,
+        "T1": -2
+      }
+    },
+    {
+      "id": "M12",
+      "direction": "services",
+      "title": "Единая цифровая платформа обращений",
+      "scope": "city",
+      "cost": 14,
+      "lag": 1,
+      "effects": {
+        "C2": 5
+      }
+    },
+    {
+      "id": "M13",
+      "direction": "services",
+      "title": "Модернизация тепло- и водосетей",
+      "scope": "district",
+      "cost": 28,
+      "lag": 4,
+      "effects": {
+        "C1": 18,
+        "E2": 2
+      }
+    },
+    {
+      "id": "M14",
+      "direction": "services",
+      "title": "Аварийные бригады ЖКХ + раннее оповещение",
+      "scope": "city",
+      "cost": 16,
+      "lag": 1,
+      "effects": {
+        "C1": 5,
+        "C2": 2
+      }
+    }
+  ],
+  "synergies": [
+    {
+      "pair": [
+        "M1",
+        "M2"
+      ],
+      "effects": {
+        "T1": 2
+      }
+    },
+    {
+      "pair": [
+        "M10",
+        "M12"
+      ],
+      "effects": {
+        "B1": 2
+      }
+    },
+    {
+      "pair": [
+        "M5",
+        "M6"
+      ],
+      "effects": {
+        "E2": 2
+      }
+    }
+  ],
+  "conflicts": [
+    {
+      "pair": [
+        "M1",
+        "M3"
+      ],
+      "scope": "global",
+      "reason": "Выберите автобусные полосы или ЛРТ: M1 и M3 несовместимы во всех районах."
+    },
+    {
+      "pair": [
+        "M4",
+        "M7"
+      ],
+      "scope": "district",
+      "reason": "M4 и M7 конфликтуют за участок в одном районе."
+    },
+    {
+      "pair": [
+        "M5",
+        "M13"
+      ],
+      "scope": "district",
+      "reason": "M5 и M13 дублируют программу в одном районе."
+    }
+  ]
 }
