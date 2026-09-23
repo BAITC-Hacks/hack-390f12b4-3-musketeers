@@ -33,6 +33,8 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe serve.py
 ```
 
+Если `py -3.12` отвечает `No suitable Python runtime found`, Python 3.12 не установлен как обычный системный Python: установите его и повторите первую команду. **Не переходите к установке зависимостей, пока `.venv` не создана.** Правильный путь к Python окружения: `.\.venv\Scripts\python.exe`, а не `..venv\Scripts\python.exe`. В PowerShell можно указать и полный путь к любому уже установленному Python 3.12: `& 'C:\путь\к\python.exe' -m venv .venv`.
+
 Linux / macOS:
 
 ```sh
