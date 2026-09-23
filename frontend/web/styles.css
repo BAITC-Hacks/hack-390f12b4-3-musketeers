@@ -2028,3 +2028,27 @@ tr:last-child td {
 
 .event-controls select { width:100%; padding:11px 12px; border:1px solid #dfe6ef; border-radius:9px; background:#fff; color:#172c49; font:inherit; }
 #team-name, #demo-code { width:100%; padding:11px 12px; border:1px solid #dfe6ef; border-radius:9px; background:#fff; color:#172c49; font:inherit; }
+
+/* Results: one score summary followed by a clear reading and action flow. */
+.result-layout { display:grid; gap:30px; }
+.result-layout .score-hero { min-height:190px; }
+.result-columns { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(300px,.85fr); gap:44px; align-items:start; }
+.result-columns > .stack { min-width:0; }
+.result-columns .decomposition { margin-top:0; }
+.result-actions { border-left:1px solid var(--line); padding-left:36px; display:grid; gap:28px; }
+.result-actions section { min-width:0; }
+.result-actions h2 { font-family:Georgia,serif; font-size:26px; line-height:1.15; font-weight:500; margin:10px 0 12px; }
+.result-actions p { color:var(--muted); line-height:1.55; font-size:13px; margin:0 0 22px; }
+.result-next { position:relative; padding-top:4px; }
+.result-next-icon { color:var(--blue); position:absolute; right:0; top:0; }
+.result-next .btn { min-height:46px; }
+.result-save { border-top:1px solid var(--line); padding-top:26px; }
+.result-save label { display:block; font-size:12px; font-weight:600; margin-bottom:8px; }
+.result-save input { width:100%; margin-bottom:11px; }
+.result-save .btn.full { min-height:43px; }
+.result-export { margin-top:9px; }
+.result-export .btn { padding-left:0; }
+.result-save .subtle-note { font-size:11px; margin:6px 0 0; }
+@media(max-width:1050px) { .result-columns { grid-template-columns:minmax(0,1.3fr) minmax(275px,1fr); gap:25px; } .result-actions { padding-left:25px; } }
+@media(max-width:790px) { .result-columns { grid-template-columns:1fr; } .result-actions { border-left:0; border-top:1px solid var(--line); padding:25px 0 0; grid-template-columns:1fr 1fr; gap:25px; } .result-save { border-top:0; border-left:1px solid var(--line); padding:0 0 0 25px; } }
+@media(max-width:570px) { .result-layout .score-hero { min-height:0; } .result-actions { grid-template-columns:1fr; } .result-save { border-left:0; border-top:1px solid var(--line); padding:25px 0 0; } }
