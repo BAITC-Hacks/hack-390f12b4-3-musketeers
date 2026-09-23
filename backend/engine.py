@@ -174,6 +174,13 @@ def recommend(scenario: Scenario) -> dict:
                         "spent": calculated["spent"], "remaining": calculated["remaining"],
                         "critical_count": calculated["result"]["critical_count"],
                         "minimum": calculated["result"]["minimum"],
+                        "changes": [
+                            {"district_id": after["id"], "indicator": key,
+                             "delta": after["after"][key] - before["after"][key]}
+                            for before, after in zip(current["districts"], calculated["districts"])
+                            for key in DATA["weights"]
+                            if after["after"][key] != before["after"][key]
+                        ],
                     })
     improvements.sort(key=lambda c: (-c["score"], c["spent"], c["id"]))
     return {"candidates": improvements[:3], "checked": checked, "search": "single-replacement"}

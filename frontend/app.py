@@ -280,8 +280,7 @@ if section == "Результаты и AI":
             if audit["recommendations"]:
                 st.write("**Рекомендации по рассчитанным альтернативам**")
                 for recommendation in audit["recommendations"]:
-                    st.write(recommendation["explanation"])
-                    st.caption(report["facts"]["candidate:" + recommendation["candidate_id"]])
+                    st.write(report["facts"]["candidate:" + recommendation["candidate_id"]])
             for limitation in audit["limitations"]:
                 st.caption(limitation)
 
