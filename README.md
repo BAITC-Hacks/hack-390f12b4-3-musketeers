@@ -24,23 +24,29 @@ cd hack-390f12b4-3-musketeers
 
 Если репозиторий закрыт, для клонирования нужен доступ через GitHub-аккаунт команды или организаторов.
 
-Windows PowerShell:
+Windows PowerShell (вставьте блок целиком):
 
 ```powershell
-py -3.12 -m venv .venv
+$codexPython = Join-Path $env:USERPROFILE '.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+if (Test-Path $codexPython) {
+    & $codexPython -m venv .venv
+} else {
+    py -3.12 -m venv .venv
+}
+if (-not (Test-Path '.\.venv\Scripts\python.exe')) { throw 'Python 3.12 не найден или .venv не создалась. Установите Python 3.12 и повторите запуск.' }
 .\.venv\Scripts\python.exe -m pip install -r requirements.lock.txt
-Copy-Item .env.example .env
+if (-not (Test-Path '.env')) { Copy-Item .env.example .env }
 .\.venv\Scripts\python.exe serve.py
 ```
 
-Если `py -3.12` отвечает `No suitable Python runtime found`, Python 3.12 не установлен как обычный системный Python: установите его и повторите первую команду. **Не переходите к установке зависимостей, пока `.venv` не создана.** Правильный путь к Python окружения: `.\.venv\Scripts\python.exe`, а не `..venv\Scripts\python.exe`. В PowerShell можно указать и полный путь к любому уже установленному Python 3.12: `& 'C:\путь\к\python.exe' -m venv .venv`.
+На компьютере с Codex блок использует его Python 3.12, если этот путь существует. На остальных компьютерах нужен установленный Python 3.12, доступный через `py -3.12`. При сообщении `No suitable Python runtime found` установите Python 3.12 и повторите блок. Проверка `.venv` останавливает выполнение, если окружение не создалось. Правильный путь к нему — `.\.venv\Scripts\python.exe`, не `..venv\Scripts\python.exe`. Если порт 8520 уже занят, перед последней командой выполните `$env:PORT = '8522'` и откройте `http://127.0.0.1:8522/`.
 
 Linux / macOS:
 
 ```sh
 python3.12 -m venv .venv
 .venv/bin/python -m pip install -r requirements.lock.txt
-cp .env.example .env
+test -f .env || cp .env.example .env
 .venv/bin/python serve.py
 ```
 
