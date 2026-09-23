@@ -59,9 +59,8 @@ def main():
                 time.sleep(.25)
         else:
             raise RuntimeError("Backend startup timed out.")
-        frontend = subprocess.Popen([sys.executable, "-m", "streamlit", "run", "frontend/app.py",
-                                     "--server.address", "127.0.0.1",
-                                     "--server.port", str(args.ui_port), "--server.headless", "true"],
+        frontend = subprocess.Popen([sys.executable, "-m", "uvicorn", "frontend.server:app",
+                                     "--host", "127.0.0.1", "--port", str(args.ui_port)],
                                     cwd=ROOT, creationflags=flags)
         children.append(frontend)
         print(f"Open http://127.0.0.1:{args.ui_port} | API docs: http://127.0.0.1:{args.api_port}/docs", flush=True)
