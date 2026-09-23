@@ -96,6 +96,8 @@ h2 { font-weight:600;letter-spacing:-.035em; }
 .city-map { max-height:405px; }
 .map-district { stroke:#f8f7f3;stroke-width:5; }
 .map-district.selected { stroke:#215a70;filter:drop-shadow(0 3px 5px #215a7020); }
+.map-district:focus { outline:none; }
+.map-district:focus-visible { stroke:#174c61;stroke-width:6;stroke-dasharray:11 6; }
 .map-label { fill:#315a59;font-weight:650; }
 .selected-label { fill:#124358; }
 .map-score { fill:#5c7977; }
