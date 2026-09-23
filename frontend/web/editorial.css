@@ -19,6 +19,7 @@ h1,.page-heading h1,.score-hero h2,.district-title {
   letter-spacing:-.045em;
 }
 h1,.page-heading h1 { font-size:clamp(42px,4.5vw,68px);line-height:1.02; }
+.page-heading h1:focus { outline:none; }
 h2 { font-weight:600;letter-spacing:-.035em; }
 .eyebrow,.nav-label { letter-spacing:.16em;font-size:10px; }
 .sidebar {
@@ -128,18 +129,36 @@ h2 { font-weight:600;letter-spacing:-.035em; }
 .step-num { border:0;background:transparent;color:#215a70;font-family:Georgia,serif;font-size:21px;width:31px;height:auto; }
 .step strong { font-size:13px; }
 .step p { font-size:11px; }
+.catalog-guide { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-block:1px solid #cbd4cd;margin:2px 0 32px; }
+.catalog-guide>div { display:flex;gap:14px;padding:19px 18px 18px 0;align-items:flex-start; }
+.catalog-guide>div+div { border-left:1px solid #dce2dc;padding-left:22px; }
+.catalog-guide b { color:#215a70;font:22px Georgia,serif;line-height:1; }
+.catalog-guide span { color:#22343a;font-size:13px;font-weight:650;line-height:1.3; }
+.catalog-guide small { display:block;color:#71807e;font-size:11px;font-weight:400;margin-top:5px; }
+.catalog-section-head { display:flex;justify-content:space-between;align-items:end;gap:14px;margin-bottom:12px; }
+.catalog-section-head h2 { font:500 30px Georgia,serif;letter-spacing:-.04em;margin-top:5px; }
+.catalog-section-head>span { color:#71807e;font-size:11px;padding-bottom:5px; }
 .catalog-tools { border-block:1px solid #cbd4cd;padding:13px 0;gap:7px; }
 .filter { border-color:transparent;background:transparent;border-radius:2px; }
 .filter.active { background:#215a70;border-color:#215a70; }
+.catalog-content { align-items:start; }
 .catalog-grid { gap:0 24px; }
 .initiative { border:0;border-bottom:1px solid #dce2dc;border-radius:0;background:transparent;padding:22px 0;min-height:220px;transition:background .15s; }
 .initiative:hover { transform:none;box-shadow:none;border-color:#9fb7ad;background:#f1f3ee; }
-.initiative h3 { font-size:17px;line-height:1.3; }
+.initiative-direction { color:#477969;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-top:13px; }
+.initiative h3 { font-size:17px;line-height:1.3;margin-top:5px; }
 .initiative p { font-size:12px; }
 .initiative-footer { border-color:#dce2dc; }
 .price { font-family:Georgia,serif;font-size:27px; }
 .plan-panel { background:#eef1eb;padding:0 19px;top:24px;border-radius:3px; }
+.plan-head { margin-bottom:9px; }
+.plan-head .eyebrow { color:#477969;font-size:9px; }
+.plan-head h2 { font:500 27px Georgia,serif;letter-spacing:-.04em;margin-top:4px; }
+.plan-guidance { color:#60716e;font-size:11px;line-height:1.5;margin:0 0 11px; }
 .plan-item,.empty-slot { border-color:#d7dfd5; }
+.catalog-extra { border-top:1px solid #cbd4cd;margin-top:35px;padding-top:16px; }
+.catalog-extra>summary { color:#215a70;cursor:pointer;font-size:12px;font-weight:650; }
+.catalog-extra .event-panel { margin:9px 0 0;padding-inline:0;border-top:0; }
 .score-hero { border:0;border-radius:3px;background:#e8efea;padding:28px; }
 .score-hero h2 { font-size:28px; }
 .score-big { font-family:Georgia,serif;font-weight:500;color:#215a70; }
@@ -159,6 +178,8 @@ h2 { font-weight:600;letter-spacing:-.035em; }
   .content-grid { grid-template-columns:minmax(0,1.3fr) minmax(250px,1fr); }
 }
 @media(max-width:790px) {
+  .nav { display:flex;flex-direction:column; }
+  .nav-button { width:100%; }
   .content-grid { grid-template-columns:1fr;gap:24px; }
   .content-grid>.panel:first-child { border-right:0;border-bottom:1px solid #dce2dc;padding:0 0 20px; }
   .content-grid>.district-detail { padding-left:0; }
@@ -166,10 +187,11 @@ h2 { font-weight:600;letter-spacing:-.035em; }
   .event-controls { justify-content:flex-start; }
   .page-heading h1 { font-size:42px; }
   .plan-panel { position:static; }
+  .catalog-guide { margin-bottom:24px; }
 }
 @media(max-width:540px) {
   .sidebar { width:100%;height:73px;padding:5px 8px;background:#f8f7f3ef; }
-  .nav { height:100%;align-items:center; }
+  .nav { height:100%;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center; }
   .nav-button { width:20%;height:59px;min-height:0;padding:4px 2px;gap:3px;justify-content:center; }
   .nav-button span { font-size:9px;line-height:1.1;text-align:center; }
   .nav-button .icon { width:17px;height:17px; }
@@ -191,6 +213,13 @@ h2 { font-weight:600;letter-spacing:-.035em; }
   .event-controls select { flex:1;min-width:145px; }
   .event-controls .btn { min-width:125px; }
   .catalog-grid { gap:0 13px; }
+  .catalog-guide { grid-template-columns:1fr; }
+  .catalog-guide>div { padding:11px 0; }
+  .catalog-guide>div+div { border-left:0;border-top:1px solid #dce2dc;padding-left:0; }
+  .catalog-guide b { font-size:18px;min-width:25px; }
+  .catalog-guide span { font-size:12px; }
+  .catalog-guide small { margin-top:2px; }
+  .catalog-section-head h2 { font-size:25px; }
   .initiative { padding:18px 0;min-height:245px; }
   .initiative h3 { font-size:14px; }
   .score-hero h2 { font-size:19px; }
