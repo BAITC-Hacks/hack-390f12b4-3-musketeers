@@ -57,7 +57,8 @@ def test_unknown_events_and_demo_access(monkeypatch):
     assert client.post("/api/preview", json={**body, "event_id": "invented"}).status_code == 422
     assert client.get("/api/leaderboard?event_id=invented").status_code == 422
     monkeypatch.setenv("DEMO_ACCESS_CODE", "demo-test")
-    assert client.post("/api/analyze", json=body).status_code == 403
+    for _ in range(13):
+        assert client.post("/api/analyze", json=body).status_code == 403
     assert client.post("/api/analyze", json=body, headers={"X-Demo-Code": "demo-test"}).status_code == 200
     assert client.post("/api/simulate", json=body).status_code == 200
 

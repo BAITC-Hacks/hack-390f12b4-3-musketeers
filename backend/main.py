@@ -98,10 +98,10 @@ def rate_limit(request, purpose, maximum):
 @app.post("/api/analyze")
 def analyze(scenario: Scenario, request: Request):
     check(scenario)
-    rate_limit(request, "analyze", 12)
     access_code = os.getenv("DEMO_ACCESS_CODE", "")
     if access_code and not hmac.compare_digest(request.headers.get("X-Demo-Code", ""), access_code):
         raise HTTPException(403, "Введите код доступа к AI, предоставленный командой.")
+    rate_limit(request, "analyze", 12)
     calculated = simulate(scenario)
     candidates = recommend(scenario)
     return advisor.analyze(scenario, calculated, candidates)
