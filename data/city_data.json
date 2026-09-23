@@ -1,0 +1,37 @@
+{
+  "total_budget": 100,
+  "districts": [
+    {"name": "Есиль", "transport": 53.5, "greening": 70, "social": 51.5, "safety": 69, "services": 72.5},
+    {"name": "Нура", "transport": 47.5, "greening": 55, "social": 36.5, "safety": 52.5, "services": 55},
+    {"name": "Алматы", "transport": 57.5, "greening": 52.5, "social": 62.5, "safety": 57, "services": 55},
+    {"name": "Байконур", "transport": 60, "greening": 52.5, "social": 59, "safety": 55, "services": 56.5},
+    {"name": "Сарыарка", "transport": 60, "greening": 41, "social": 65, "safety": 56.5, "services": 50}
+  ],
+  "initiatives": {
+    "transport": [
+      {"id": "t1", "title": "Пилот выделенных автобусных полос", "cost": 15, "impact": {"transport": 12, "greening": 2}},
+      {"id": "t2", "title": "Адаптивные светофоры на загруженных перекрёстках", "cost": 20, "impact": {"transport": 16, "safety": 5}},
+      {"id": "t3", "title": "Тёплые остановки и усиление зимних маршрутов", "cost": 25, "impact": {"transport": 20, "services": 5}}
+    ],
+    "greening": [
+      {"id": "g1", "title": "Озеленение дворов морозостойкими деревьями", "cost": 10, "impact": {"greening": 10, "social": 2}},
+      {"id": "g2", "title": "Ветрозащитные зелёные полосы", "cost": 20, "impact": {"greening": 16, "safety": 4}},
+      {"id": "g3", "title": "Скверы с поливом и уходом за саженцами", "cost": 25, "impact": {"greening": 20, "social": 5}}
+    ],
+    "social": [
+      {"id": "so1", "title": "Бесплатные секции при районных школах", "cost": 10, "impact": {"social": 10, "safety": 2}},
+      {"id": "so2", "title": "Дополнительные кабинеты первичной медпомощи", "cost": 20, "impact": {"social": 17, "services": 3}},
+      {"id": "so3", "title": "Дополнительные дошкольные группы", "cost": 25, "impact": {"social": 22, "services": 3}}
+    ],
+    "safety": [
+      {"id": "sa1", "title": "Освещение пешеходных переходов", "cost": 10, "impact": {"safety": 12, "transport": 2}},
+      {"id": "sa2", "title": "Камеры и освещение проблемных дворов", "cost": 20, "impact": {"safety": 18, "services": 3}},
+      {"id": "sa3", "title": "Безопасные школьные маршруты и борьба с гололёдом", "cost": 25, "impact": {"safety": 22, "transport": 4}}
+    ],
+    "services": [
+      {"id": "sv1", "title": "Диспетчеризация обращений жителей в iKomek", "cost": 10, "impact": {"services": 12, "social": 2}},
+      {"id": "sv2", "title": "Аварийные бригады теплосетей и зимний резерв", "cost": 20, "impact": {"services": 18, "safety": 5}},
+      {"id": "sv3", "title": "Датчики утечек и профилактика аварий теплосетей", "cost": 25, "impact": {"services": 22, "greening": 3}}
+    ]
+  }
+}
